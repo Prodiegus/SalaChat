@@ -42,14 +42,21 @@ public class DB {
     }
 
     // Método para actualizar un usuario
-    public void actualizarUsuario(String nombre, String nuevaClave, boolean nuevoAdmin, String nuevoGrupo) {
+    public void actualizarClave(String nombre, String nuevaClave) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         usuarios.updateOne(Filters.eq("nombre", nombre),
                            Updates.combine(
-                               Updates.set("clave", nuevaClave),
-                               Updates.set("admin", nuevoAdmin),
-                               Updates.set("grupo", nuevoGrupo)
+                               Updates.set("clave", nuevaClave)
                            ));
+    }
+
+    public void actualizarUsuario(String nombre, boolean nuevoAdmin, String nuevoGrupo) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        usuarios.updateOne(Filters.eq("nombre", nombre),
+                Updates.combine(
+                        Updates.set("admin", nuevoAdmin),
+                        Updates.set("grupo", nuevoGrupo)
+                ));
     }
 
     // Método para ver los mensajes de un usuario
@@ -114,16 +121,7 @@ public class DB {
                     db.eliminarUsuario(nombre);
                     break;
                 case 3:
-                    System.out.print("Nombre: ");
-                    nombre = scanner.nextLine();
-                    System.out.print("Nueva clave: ");
-                    String nuevaClave = scanner.nextLine();
-                    System.out.print("Nuevo admin (true/false): ");
-                    boolean nuevoAdmin = scanner.nextBoolean();
-                    scanner.nextLine(); // Consumir el salto de línea
-                    System.out.print("Nuevo grupo: ");
-                    String nuevoGrupo = scanner.nextLine();
-                    db.actualizarUsuario(nombre, nuevaClave, nuevoAdmin, nuevoGrupo);
+                    // Implementar método actualizarUsuario si es necesario
                     break;
                 case 4:
                     System.out.println("Usuarios:");
