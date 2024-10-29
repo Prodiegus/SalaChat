@@ -1,3 +1,4 @@
+package utalca.chatpyme;
 
 import java.net.Socket;
 import javax.swing.JFrame;

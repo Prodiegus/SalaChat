@@ -1,3 +1,5 @@
+package utalca.chatpyme;
+
 import java.net.ServerSocket;
 import java.net.Socket;
 import javax.swing.DefaultListModel;
