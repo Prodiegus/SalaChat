@@ -9,6 +9,7 @@ import com.mongodb.client.model.Updates;
 import org.bson.Document;
 import java.util.List;
 import java.util.Scanner;
+import java.util.ArrayList;
 
 public class DB {
     private MongoClient mongoClient;
@@ -23,16 +24,14 @@ public class DB {
         return database.getCollection("usuarios");
     }
 
-    public MongoCollection<Document> getMensajesCollection() {
-        return database.getCollection("mensajes");
-    }
-
     // Método para agregar un usuario
-    public void agregarUsuario(String nombre, String clave, boolean admin) {
+    public void agregarUsuario(String nombre, String clave, boolean admin, String grupo) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         Document usuario = new Document("nombre", nombre)
                                 .append("clave", clave)
-                                .append("admin", admin);
+                                .append("admin", admin)
+                                .append("grupo", grupo)
+                                .append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
     }
 
@@ -43,60 +42,36 @@ public class DB {
     }
 
     // Método para actualizar un usuario
-    public void actualizarUsuario(String nombre, String nuevaClave, boolean nuevoAdmin) {
+    public void actualizarUsuario(String nombre, String nuevaClave, boolean nuevoAdmin, String nuevoGrupo) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         usuarios.updateOne(Filters.eq("nombre", nombre),
                            Updates.combine(
                                Updates.set("clave", nuevaClave),
-                               Updates.set("admin", nuevoAdmin)
+                               Updates.set("admin", nuevoAdmin),
+                               Updates.set("grupo", nuevoGrupo)
                            ));
     }
 
-    // Método para agregar un mensaje
-    public void agregarMensaje(List<String> mensajes, List<String> logs) {
-        MongoCollection<Document> mensajesCollection = getMensajesCollection();
-        Document mensaje = new Document("mensajes", mensajes)
-                                .append("logs", logs);
-        mensajesCollection.insertOne(mensaje);
-    }
-
-    // Método para eliminar un mensaje
-    public void eliminarMensaje(String mensajeId) {
-        MongoCollection<Document> mensajesCollection = getMensajesCollection();
-        mensajesCollection.deleteOne(Filters.eq("_id", mensajeId));
-    }
-
-    // Método para actualizar un mensaje
-    public void actualizarMensaje(String mensajeId, List<String> nuevosMensajes, List<String> nuevosLogs) {
-        MongoCollection<Document> mensajesCollection = getMensajesCollection();
-        mensajesCollection.updateOne(Filters.eq("_id", mensajeId),
-                                     Updates.combine(
-                                         Updates.set("mensajes", nuevosMensajes),
-                                         Updates.set("logs", nuevosLogs)
-                                     ));
-    }
-
-    // Método para ver todos los usuarios
-    public void verUsuarios() {
+    // Método para ver los mensajes de un usuario
+    public List<String> verMensajes(String nombreUsuario) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
-        for (Document usuario : usuarios.find()) {
-            System.out.println(usuario.toJson());
+        Document usuario = usuarios.find(Filters.eq("nombre", nombreUsuario)).first();
+        if (usuario != null) {
+            return (List<String>) usuario.get("mensajes");
         }
-    }
-
-    // Método para ver todos los mensajes
-    public void verMensajes() {
-        MongoCollection<Document> mensajes = getMensajesCollection();
-        for (Document mensaje : mensajes.find()) {
-            System.out.println(mensaje.toJson());
-        }
+        return new ArrayList<>();
     }
 
     // Método para verificar un usuario
-    public boolean verificarUsuario(String nombre, String clave) {
+    public List<String> verificarUsuario(String nombre, String clave) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         Document usuario = usuarios.find(Filters.and(Filters.eq("nombre", nombre), Filters.eq("clave", clave))).first();
-        return usuario != null;
+        if (usuario != null) {
+            boolean admin = usuario.getBoolean("admin");
+            String grupo = usuario.getString("grupo");
+            return List.of("Valido", String.valueOf(admin), grupo);
+        }
+        return List.of("Invalido", "", "");
     }
 
     public static void main(String[] args) {
@@ -128,7 +103,10 @@ public class DB {
                     String clave = scanner.nextLine();
                     System.out.print("Admin (true/false): ");
                     boolean admin = scanner.nextBoolean();
-                    db.agregarUsuario(nombre, clave, admin);
+                    scanner.nextLine(); // Consumir el salto de línea
+                    System.out.print("Grupo: ");
+                    String grupo = scanner.nextLine();
+                    db.agregarUsuario(nombre, clave, admin, grupo);
                     break;
                 case 2:
                     System.out.print("Nombre: ");
@@ -142,42 +120,38 @@ public class DB {
                     String nuevaClave = scanner.nextLine();
                     System.out.print("Nuevo admin (true/false): ");
                     boolean nuevoAdmin = scanner.nextBoolean();
-                    db.actualizarUsuario(nombre, nuevaClave, nuevoAdmin);
+                    scanner.nextLine(); // Consumir el salto de línea
+                    System.out.print("Nuevo grupo: ");
+                    String nuevoGrupo = scanner.nextLine();
+                    db.actualizarUsuario(nombre, nuevaClave, nuevoAdmin, nuevoGrupo);
                     break;
                 case 4:
-                    db.verUsuarios();
+                    System.out.println("Usuarios:");
+                    db.getUsuariosCollection().find().forEach(System.out::println);
+
                     break;
                 case 5:
                     System.out.print("Nombre: ");
                     nombre = scanner.nextLine();
                     System.out.print("Clave: ");
                     clave = scanner.nextLine();
-                    boolean verificado = db.verificarUsuario(nombre, clave);
+                    List<String> verificado = db.verificarUsuario(nombre, clave);
                     System.out.println("Usuario verificado: " + verificado);
                     break;
                 case 6:
-                    System.out.print("Mensajes (separados por comas): ");
-                    List<String> mensajes = List.of(scanner.nextLine().split(","));
-                    System.out.print("Logs (separados por comas): ");
-                    List<String> logs = List.of(scanner.nextLine().split(","));
-                    db.agregarMensaje(mensajes, logs);
+                    // Implementar método agregarMensaje si es necesario
                     break;
                 case 7:
-                    System.out.print("ID del mensaje: ");
-                    String mensajeId = scanner.nextLine();
-                    db.eliminarMensaje(mensajeId);
+                    // Implementar método eliminarMensaje si es necesario
                     break;
                 case 8:
-                    System.out.print("ID del mensaje: ");
-                    mensajeId = scanner.nextLine();
-                    System.out.print("Nuevos mensajes (separados por comas): ");
-                    List<String> nuevosMensajes = List.of(scanner.nextLine().split(","));
-                    System.out.print("Nuevos logs (separados por comas): ");
-                    List<String> nuevosLogs = List.of(scanner.nextLine().split(","));
-                    db.actualizarMensaje(mensajeId, nuevosMensajes, nuevosLogs);
+                    // Implementar método actualizarMensaje si es necesario
                     break;
                 case 9:
-                    db.verMensajes();
+                    System.out.print("Nombre del usuario: ");
+                    nombre = scanner.nextLine();
+                    List<String> mensajesUsuario = db.verMensajes(nombre);
+                    System.out.println("Mensajes del usuario: " + mensajesUsuario);
                     break;
                 case 0:
                     System.out.println("Saliendo...");
