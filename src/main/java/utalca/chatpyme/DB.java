@@ -25,12 +25,11 @@ public class DB {
     }
 
     // Método para agregar un usuario
-    public void agregarUsuario(String nombre, String clave, boolean admin, String grupo) {
+    public void agregarUsuario(String nombre, String clave, boolean admin) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         Document usuario = new Document("nombre", nombre)
                                 .append("clave", clave)
                                 .append("admin", admin)
-                                .append("grupo", grupo)
                                 .append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
     }
@@ -75,8 +74,7 @@ public class DB {
         Document usuario = usuarios.find(Filters.and(Filters.eq("nombre", nombre), Filters.eq("clave", clave))).first();
         if (usuario != null) {
             boolean admin = usuario.getBoolean("admin");
-            String grupo = usuario.getString("grupo");
-            return List.of("Valido", String.valueOf(admin), grupo);
+            return List.of("Usuario Valido");
         }
         return List.of("Invalido", "", "");
     }
@@ -112,8 +110,8 @@ public class DB {
                     boolean admin = scanner.nextBoolean();
                     scanner.nextLine(); // Consumir el salto de línea
                     System.out.print("Grupo: ");
-                    String grupo = scanner.nextLine();
-                    db.agregarUsuario(nombre, clave, admin, grupo);
+                    //String grupo = scanner.nextLine();
+                    db.agregarUsuario(nombre, clave, admin);
                     break;
                 case 2:
                     System.out.print("Nombre: ");
@@ -134,7 +132,8 @@ public class DB {
                     System.out.print("Clave: ");
                     clave = scanner.nextLine();
                     List<String> verificado = db.verificarUsuario(nombre, clave);
-                    System.out.println("Usuario verificado: " + verificado);
+                    //System.out.println("Usuario verificado: " + verificado);
+                    System.out.println(verificado);
                     break;
                 case 6:
                     // Implementar método agregarMensaje si es necesario
