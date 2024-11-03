@@ -9,7 +9,7 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
 import javax.swing.JTextField;
 
-public class PanelCliente{
+public class PanelCliente extends JPanel {
     private JScrollPane scroll;
     private JTextArea textArea;
     private JTextField textField;
