@@ -45,10 +45,10 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         clientesConectados.put(alias, this); // Agregar cliente al mapa
 
                         // Inicializar grupos si es necesario
-                        grupos.putIfAbsent("Grupo1", new DefaultListModel<>());
-                        grupos.putIfAbsent("Grupo2", new DefaultListModel<>());
+                        grupos.putIfAbsent("medico", new DefaultListModel<>());
+                        grupos.putIfAbsent("administrador", new DefaultListModel<>());
                         // Asignar el grupo por defecto
-                        grupoActual = "Grupo1";
+                        grupoActual = "medico";
                         grupos.get(grupoActual).addElement(alias + " se ha conectado.");
                         // Notificar a todos los miembros del grupo que el nuevo cliente se ha unido
                         notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");

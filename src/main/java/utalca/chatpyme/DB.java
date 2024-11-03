@@ -25,11 +25,12 @@ public class DB {
     }
 
     // Método para agregar un usuario
-    public void agregarUsuario(String nombre, String clave, boolean admin) {
+    public void agregarUsuario(String nombre, String clave, boolean admin, String grupo) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         Document usuario = new Document("nombre", nombre)
                                 .append("clave", clave)
                                 .append("admin", admin)
+                                .append("grupo", grupo)
                                 .append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
     }
@@ -66,6 +67,14 @@ public class DB {
             return (List<String>) usuario.get("mensajes");
         }
         return new ArrayList<>();
+    }
+
+    public void agregarMensaje(String nombreUsuario, List<String> mensajes) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        usuarios.updateOne(Filters.eq("nombre", nombreUsuario),
+                Updates.combine(
+                        Updates.set("mensajes", mensajes)
+                ));
     }
 
     // Método para verificar un usuario
@@ -110,8 +119,8 @@ public class DB {
                     boolean admin = scanner.nextBoolean();
                     scanner.nextLine(); // Consumir el salto de línea
                     System.out.print("Grupo: ");
-                    //String grupo = scanner.nextLine();
-                    db.agregarUsuario(nombre, clave, admin);
+                    String grupo = scanner.nextLine();
+                    db.agregarUsuario(nombre, clave, admin, grupo);
                     break;
                 case 2:
                     System.out.print("Nombre: ");
@@ -136,7 +145,13 @@ public class DB {
                     System.out.println(verificado);
                     break;
                 case 6:
-                    // Implementar método agregarMensaje si es necesario
+                    System.out.print("Nombre del usuario: ");
+                    nombre = scanner.nextLine();
+                    System.out.print("Mensaje: ");
+                    String mensaje = scanner.nextLine();
+                    List<String> mensajes = db.verMensajes(nombre);
+                    mensajes.add(mensaje);
+                    mensajes.add(mensaje);
                     break;
                 case 7:
                     // Implementar método eliminarMensaje si es necesario
