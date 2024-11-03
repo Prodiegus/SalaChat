@@ -1,41 +1,29 @@
 package utalca.chatpyme;
-
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.Socket;
-import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
 import javax.swing.DefaultListModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
 
 public class HiloDeCliente implements Runnable, ListDataListener {
-    private DefaultListModel mensajes;
     private Socket socket;
     private DataInputStream dataInput;
     private DataOutputStream dataOutput;
-    private int idCliente; // Identificador del cliente
-    private String grupoActual = null; // Grupo al que pertenece el cliente, null si está en el chat global
-    private static HashMap<String, ArrayList<HiloDeCliente>> grupos = new HashMap<>(); // Grupos y sus miembros
-    private static HashMap<Integer, DataOutputStream> clientesConectados = new HashMap<>(); // Lista de clientes conectados
+    private String alias;
+    private String grupoActual; // Grupo actual al que pertenece el cliente
+    private Map<String, DefaultListModel<String>> grupos;
+    private static Map<String, HiloDeCliente> clientesConectados = new HashMap<>(); // Mapa de alias a hilos
 
-    public HiloDeCliente(DefaultListModel mensajes, Socket socket, int idCliente) {
-        this.mensajes = mensajes;
+    public HiloDeCliente(Map<String, DefaultListModel<String>> grupos, Socket socket, Map<String, HiloDeCliente> clientesConectados) {
         this.socket = socket;
-        this.idCliente = idCliente;
+        this.grupos = grupos; // Mapa de grupos
         try {
             dataInput = new DataInputStream(socket.getInputStream());
             dataOutput = new DataOutputStream(socket.getOutputStream());
-
-            // Almacenar el stream de este cliente en el HashMap
-            synchronized (clientesConectados) {
-                clientesConectados.put(idCliente, dataOutput);
-            }
-
-            // Enviar la ID al cliente
-            dataOutput.writeUTF("Tu ID es: Cliente " + idCliente);
-
-            mensajes.addListDataListener(this);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -44,68 +32,75 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     @Override
     public void run() {
         try {
+            DB db = new DB();
             while (true) {
-                String texto = dataInput.readUTF();
+                String alias = dataInput.readUTF();
+                String password = dataInput.readUTF();
 
-                // Manejo de comandos de grupos
-                if (texto.startsWith("/grupo ")) {
-                    String nombreGrupo = texto.split(" ", 2)[1];
-                    if (!grupos.containsKey(nombreGrupo)) {
-                        grupos.put(nombreGrupo, new ArrayList<>());
-                        dataOutput.writeUTF("Grupo " + nombreGrupo + " creado.");
-                    } else {
-                        dataOutput.writeUTF("El grupo " + nombreGrupo + " ya existe.");
-                    }
-                } else if (texto.startsWith("/unir ")) {
-                    String nombreGrupo = texto.split(" ", 2)[1];
-                    if (grupos.containsKey(nombreGrupo)) {
-                        if (grupoActual != null) {
-                            grupos.get(grupoActual).remove(this); // Salir del grupo actual
-                        }
-                        grupoActual = nombreGrupo;
-                        grupos.get(grupoActual).add(this); // Unirse al nuevo grupo
-                        dataOutput.writeUTF("Te has unido al grupo " + nombreGrupo);
-                        mensajes.addElement("Cliente " + idCliente + " se ha unido al grupo " + nombreGrupo);
-                    } else {
-                        dataOutput.writeUTF("El grupo " + nombreGrupo + " no existe.");
-                    }
-                } else if (texto.equals("/salir")) {
-                    if (grupoActual != null) {
-                        grupos.get(grupoActual).remove(this); // Salir del grupo
-                        dataOutput.writeUTF("Has salido del grupo y estás de vuelta en el chat global.");
-                        mensajes.addElement("Cliente " + idCliente + " ha salido del grupo " + grupoActual);
-                        grupoActual = null; // Volver al chat global
-                    }
-                } else if (texto.startsWith("@")) {
-                    // Enviar mensaje privado
-                    String[] partes = texto.split(":", 2);
-                    String idDestinoStr = partes[0].substring(1).trim();
-                    String mensajePrivado = partes[1].trim();
+                while (true) {
+                    String texto = dataInput.readUTF();
+                    // Si el cliente envía su alias
+                    if (texto.startsWith("/alias ")) {
+                        this.alias = texto.split(" ")[1];
+                        clientesConectados.put(alias, this); // Agregar cliente al mapa
 
-                    try {
-                        int idDestino = Integer.parseInt(idDestinoStr);
-                        if (clientesConectados.containsKey(idDestino)) {
-                            DataOutputStream clienteDestino = clientesConectados.get(idDestino);
-                            clienteDestino.writeUTF("(Privado de Cliente " + idCliente + "): " + mensajePrivado);
-                            dataOutput.writeUTF("(Privado a Cliente " + idDestino + "): " + mensajePrivado);
+                        // Inicializar grupos si es necesario
+                        grupos.putIfAbsent("Grupo1", new DefaultListModel<>());
+                        grupos.putIfAbsent("Grupo2", new DefaultListModel<>());
+                        // Asignar el grupo por defecto
+                        grupoActual = "Grupo1";
+                        grupos.get(grupoActual).addElement(alias + " se ha conectado.");
+                        // Notificar a todos los miembros del grupo que el nuevo cliente se ha unido
+                        notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
+                    }
+
+                    // Comando para unirse a un grupo
+                    else if (texto.startsWith("/unir ")) {
+                        String nuevoGrupo = texto.split(" ")[1];
+                        if (grupos.containsKey(nuevoGrupo)) {
+                            grupos.get(grupoActual).removeElement(alias + " se ha desconectado de " + grupoActual);
+                            grupoActual = nuevoGrupo;
+                            grupos.get(grupoActual).addElement(alias + " se ha unido a " + grupoActual);
+                            // Notificar a todos los miembros del nuevo grupo
+                            notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
+                            dataOutput.writeUTF("Te has unido al grupo: " + grupoActual);
                         } else {
-                            dataOutput.writeUTF("El cliente con ID " + idDestino + " no está conectado.");
+                            dataOutput.writeUTF("El grupo " + nuevoGrupo + " no existe.");
                         }
-                    } catch (NumberFormatException e) {
-                        dataOutput.writeUTF("ID de cliente no válido.");
                     }
-                } else {
-                    // Enviar mensaje al grupo o al chat global
-                    if (grupoActual != null) {
-                        // Mensaje al grupo
-                        ArrayList<HiloDeCliente> miembros = grupos.get(grupoActual);
-                        for (HiloDeCliente miembro : miembros) {
-                            miembro.dataOutput.writeUTF("(Grupo " + grupoActual + ") Cliente " + idCliente + ": " + texto);
+                    // Mensaje privado
+                    else if (texto.startsWith("/privado ")) {
+                        String[] partes = texto.split(" ", 3);
+                        String destinatario = partes[1];
+                        String mensajePrivado = partes[2];
+
+                        // Buscar el destinatario en el mapa de clientes conectados
+                        HiloDeCliente clienteDestino = clientesConectados.get(destinatario);
+                        if (clienteDestino != null) {
+                            clienteDestino.dataOutput.writeUTF("Mensaje privado de " + alias + ": " + mensajePrivado);
+                        } else {
+                            dataOutput.writeUTF("El cliente " + destinatario + " no está conectado.");
                         }
-                    } else {
-                        // Mensaje al chat global
-                        synchronized (mensajes) {
-                            mensajes.addElement("Cliente " + idCliente + ": " + texto);
+                    }
+                    // Mensaje a todos los clientes
+                    else if (texto.startsWith("/all ")) {
+                        String mensaje = texto.substring(5); // Extrae el mensaje después del comando
+                        for (HiloDeCliente cliente : clientesConectados.values()) {
+                            cliente.dataOutput.writeUTF("[Todos]" + alias + ": " + mensaje);
+                        }
+                    }
+                    // Mensaje de grupo
+                    else {
+                        // Enviar el mensaje solo a los miembros del grupo actual
+                        DefaultListModel<String> mensajesGrupo = grupos.get(grupoActual);
+                        synchronized (mensajesGrupo) {
+                            mensajesGrupo.addElement(alias + ": " + texto);
+                            // Notificar a todos los clientes en el grupo
+                            for (HiloDeCliente cliente : clientesConectados.values()) {
+                                if (cliente.grupoActual.equals(grupoActual)) {
+                                    cliente.dataOutput.writeUTF("["+grupoActual+"]"+alias + ": " + texto);
+                                }
+                            }
                         }
                     }
                 }
@@ -115,23 +110,25 @@ public class HiloDeCliente implements Runnable, ListDataListener {
         }
     }
 
-    @Override
-    public void intervalAdded(ListDataEvent e) {
-        String texto = (String) mensajes.getElementAt(e.getIndex0());
-
-        try {
-            // Enviar solo mensajes del chat global a los clientes que no estén en un grupo
-            if (grupoActual == null && texto.startsWith("Cliente ")) {
-                dataOutput.writeUTF(texto);
+    private void notificarGrupo(String mensaje) {
+        for (HiloDeCliente cliente : clientesConectados.values()) {
+            if (cliente.grupoActual.equals(grupoActual)) {
+                try {
+                    cliente.dataOutput.writeUTF(mensaje);
+                } catch (IOException e) {
+                    e.printStackTrace(); // Manejo de la excepción
+                }
             }
-        } catch (Exception excepcion) {
-            excepcion.printStackTrace();
         }
     }
 
+    // Implementación de ListDataListener
     @Override
-    public void intervalRemoved(ListDataEvent e) {}
+    public void intervalAdded(ListDataEvent e) { }
 
     @Override
-    public void contentsChanged(ListDataEvent e) {}
+    public void intervalRemoved(ListDataEvent e) { }
+
+    @Override
+    public void contentsChanged(ListDataEvent e) { }
 }
