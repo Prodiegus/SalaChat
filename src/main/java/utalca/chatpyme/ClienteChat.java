@@ -37,7 +37,7 @@ public class ClienteChat{
             dataOutput.writeUTF(alias);
             dataOutput.writeUTF(password);
 
-            db.agregarUsuario(alias, password, false); // Agregar usuario a la base de datos
+            db.agregarUsuario(alias, password, false, "medico"); // Agregar usuario a la base de datos
 
             // Pasar el alias al ControlCliente
             ControlCliente control = new ControlCliente(socket, panel, alias);
