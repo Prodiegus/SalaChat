@@ -1,58 +1,58 @@
+package utalca.chatpyme;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.IOException;
 import java.net.Socket;
-
+/**
+ *
+ * @author RPVZ
+ */
 public class ControlCliente implements ActionListener, Runnable{
     private DataInputStream dataInput;
     private DataOutputStream dataOutput;
     private PanelCliente panel;
-    private int idCliente; // ID del cliente
-
-    public ControlCliente(Socket socket, PanelCliente panel){
+    
+    public ControlCliente(Socket socket, PanelCliente panel, String alias){
         this.panel = panel;
         try{
             dataInput = new DataInputStream(socket.getInputStream());
             dataOutput = new DataOutputStream(socket.getOutputStream());
             panel.addActionListener(this);
-
-            // Recibir la ID del cliente al iniciar la conexión
-            this.idCliente = Integer.parseInt(dataInput.readUTF().replaceAll("[^0-9]", ""));
-
+    
+            // Enviar el alias del cliente al servidor
+            dataOutput.writeUTF("/alias " + alias);
+    
+            // Iniciar hilo
             Thread hilo = new Thread(this);
+            hilo.setName(alias);  // Asignar alias como nombre del hilo
             hilo.start();
-        } catch (IOException e){
+        } catch (Exception e){
             e.printStackTrace();
         }
     }
-
     @Override
     public void actionPerformed(ActionEvent evento){
         try{
-            String texto = panel.getTexto();
-            if (texto.startsWith("/")) {
-                // Comandos de usuario
-                if (texto.startsWith("/grupo ")) {
-                    String nombreGrupo = texto.split(" ", 2)[1];
-                    dataOutput.writeUTF("/grupo " + nombreGrupo);
-                } else if (texto.startsWith("/unir ")) {
-                    String nombreGrupo = texto.split(" ", 2)[1];
-                    dataOutput.writeUTF("/unir " + nombreGrupo);
-                    panel.limpiarTexto(); // Limpia la ventana al unirse a un grupo
-                } else if (texto.equals("/salir")) {
-                    dataOutput.writeUTF("/salir");
-                    panel.limpiarTexto(); // Limpia la ventana al salir del grupo
-                }
-            } else {
-                dataOutput.writeUTF(texto);
+            String mensaje = panel.getTexto();
+    
+            // Si el mensaje es para unirse a un grupo
+            if (mensaje.startsWith("/unir ")) {
+                dataOutput.writeUTF(mensaje);  // Enviar comando para unirse a un grupo
+            }
+            // Si el mensaje es un mensaje privado
+            else if (mensaje.startsWith("/privado ")) {
+                dataOutput.writeUTF(mensaje);  // Enviar mensaje privado al servidor
+            }
+            // Mensaje público
+            else {
+                dataOutput.writeUTF(mensaje);  // Enviar mensaje público al servidor
             }
         } catch (Exception excepcion){
             excepcion.printStackTrace();
         }
     }
-
+    
     @Override
     public void run(){
         try{
