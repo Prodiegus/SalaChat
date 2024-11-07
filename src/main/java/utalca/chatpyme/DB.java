@@ -1,15 +1,18 @@
 package utalca.chatpyme;
 
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
-import org.bson.Document;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.ArrayList;
+
+import org.bson.Document;
+
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 
 public class DB {
     private MongoClient mongoClient;
@@ -24,15 +27,27 @@ public class DB {
         return database.getCollection("usuarios");
     }
 
+    public MongoCollection<Document> getMensajesCollection() {
+        return database.getCollection("mensajes");
+    }
+
     // Método para agregar un usuario
     public void agregarUsuario(String nombre, String clave, boolean admin, String grupo) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
         Document usuario = new Document("nombre", nombre)
                                 .append("clave", clave)
                                 .append("admin", admin)
-                                .append("grupo", grupo)
-                                .append("mensajes", new ArrayList<String>());
+                                .append("grupo", grupo);
+                                //.append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
+    }
+
+    //Método para agregar un mensaje
+    public void agregarMensaje(String contenido) {
+        MongoCollection<Document> mensajes = getMensajesCollection();
+        Document mensajeDoc = new Document("_id", Instant.now().toEpochMilli())
+                                .append("contenido", contenido);
+        mensajes.insertOne(mensajeDoc);
     }
 
     // Método para eliminar un usuario
