@@ -127,9 +127,28 @@ public class ClienteChat{
     private void creaYVisualizaVentana(String alias) {
         JFrame v = new JFrame(alias);  // Establece el alias como título de la ventana
         panel = new PanelCliente(v.getContentPane());
+        panel.setAlias(alias);
+        try {
+            DB db = new DB();
+            List<String> mensajes = db.verMensajes(alias);
+            for (String mensaje : mensajes) {
+                panel.iniciarText(mensaje);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         v.pack();
         v.setVisible(true);
-        v.setSize(600, 300);
+        v.setSize(800, 300);
         v.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        String tipo = "medico";
+        try {
+            DB db = new DB();
+            tipo = db.verUsuario(alias).get(3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        new ControlCliente(socket, panel, alias, tipo);
     }
 }
