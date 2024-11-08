@@ -1,6 +1,8 @@
 package utalca.chatpyme;
 import java.io.DataOutputStream;
 import java.net.Socket;
+import java.util.List;
+import java.util.Scanner;
 
 import javax.swing.GroupLayout;
 import javax.swing.JFrame;
@@ -19,9 +21,12 @@ public class ClienteChat{
     private PanelCliente panel;
 
     public static void main(String[] args) {
-        new ClienteChat();
-        new ClienteChat();
-        new ClienteChat();
+        Scanner sc = new Scanner(System.in);
+        System.out.print("Cuantos clientes quieres crear conectar: ");
+        int n = sc.nextInt();
+        for (int i = 0; i < n; i++) {
+            new ClienteChat();
+        }
     }
 
     public ClienteChat() {
@@ -91,8 +96,8 @@ public class ClienteChat{
 
                     dataOutput.writeUTF(alias);
                     dataOutput.writeUTF(password);
-
-                    if (db.verificarUsuario(alias, password).get(0).equals("Invalido")) { // Verifica si el usuario está en la base de datos
+                    List<String> res = db.verificarUsuario(alias, password);
+                    if (res.get(0).equals("Invalido")) { // Verifica si el usuario está en la base de datos
                         try{
                             db.agregarUsuario(alias, password, false, "medico");  // Agrega usuario a la base de datos
                             
@@ -106,7 +111,7 @@ public class ClienteChat{
                     } else {
                         autenticado = true;  // Usuario autenticado
                         creaYVisualizaVentana(alias); // Crear la ventana del chat
-                        ControlCliente control = new ControlCliente(socket, panel, alias); // Crear el control cliente
+                        ControlCliente control = new ControlCliente(socket, panel, alias, res.get(1)); // Crear el control cliente
                     }
 
                 } catch (Exception e) {

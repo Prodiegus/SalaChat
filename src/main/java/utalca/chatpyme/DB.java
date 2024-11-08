@@ -1,15 +1,18 @@
 package utalca.chatpyme;
 
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoDatabase;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.Filters;
-import com.mongodb.client.model.Updates;
-import org.bson.Document;
+import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.ArrayList;
+
+import org.bson.Document;
+
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Updates;
 
 public class DB {
     private MongoClient mongoClient;
@@ -24,6 +27,10 @@ public class DB {
         return database.getCollection("usuarios");
     }
 
+    public MongoCollection<Document> getMensajesCollection() {
+        return database.getCollection("mensajes");
+    }
+
     // Método para agregar un usuario
     public void agregarUsuario(String nombre, String clave, boolean admin, String grupo) {
         MongoCollection<Document> usuarios = getUsuariosCollection();
@@ -33,6 +40,36 @@ public class DB {
                                 .append("grupo", grupo)
                                 .append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
+    }
+
+    public List<String> verUsuario(String nombre) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+        if (usuario != null) {
+            return List.of(usuario.getString("nombre"), usuario.getString("clave"), usuario.getBoolean("admin") ? "admin" : "medico", usuario.getString("grupo"));
+        }
+        return List.of("", "", "medico", "");
+    }
+
+    //Método para agregar un mensaje
+    public void agregarMensaje(String contenido) {
+        MongoCollection<Document> mensajes = getMensajesCollection();
+        Document mensajeDoc = new Document("_id", Instant.now().toEpochMilli())
+                                .append("contenido", contenido);
+        mensajes.insertOne(mensajeDoc);
+    }
+
+    public void guardarMensaje(String nombre, String contenido) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+        if (usuario != null) {
+            List<String> mensajes = (List<String>) usuario.get("mensajes");
+            mensajes.add(contenido);
+            usuarios.updateOne(Filters.eq("nombre", nombre),
+                               Updates.combine(
+                                   Updates.set("mensajes", mensajes)
+                               ));
+        }
     }
 
     // Método para eliminar un usuario
@@ -83,7 +120,7 @@ public class DB {
         Document usuario = usuarios.find(Filters.and(Filters.eq("nombre", nombre), Filters.eq("clave", clave))).first();
         if (usuario != null) {
             boolean admin = usuario.getBoolean("admin");
-            return List.of("Usuario Valido");
+            return List.of("Usuario Valido", admin ? "admin" : "medico", usuario.getString("grupo"));
         }
         return List.of("Invalido", "", "");
     }
