@@ -37,9 +37,18 @@ public class DB {
         Document usuario = new Document("nombre", nombre)
                                 .append("clave", clave)
                                 .append("admin", admin)
-                                .append("grupo", grupo);
-                                //.append("mensajes", new ArrayList<String>());
+                                .append("grupo", grupo)
+                                .append("mensajes", new ArrayList<String>());
         usuarios.insertOne(usuario);
+    }
+
+    public List<String> verUsuario(String nombre) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+        if (usuario != null) {
+            return List.of(usuario.getString("nombre"), usuario.getString("clave"), usuario.getBoolean("admin") ? "admin" : "medico", usuario.getString("grupo"));
+        }
+        return List.of("", "", "medico", "");
     }
 
     //Método para agregar un mensaje
@@ -48,6 +57,19 @@ public class DB {
         Document mensajeDoc = new Document("_id", Instant.now().toEpochMilli())
                                 .append("contenido", contenido);
         mensajes.insertOne(mensajeDoc);
+    }
+
+    public void guardarMensaje(String nombre, String contenido) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+        if (usuario != null) {
+            List<String> mensajes = (List<String>) usuario.get("mensajes");
+            mensajes.add(contenido);
+            usuarios.updateOne(Filters.eq("nombre", nombre),
+                               Updates.combine(
+                                   Updates.set("mensajes", mensajes)
+                               ));
+        }
     }
 
     // Método para eliminar un usuario
@@ -98,7 +120,7 @@ public class DB {
         Document usuario = usuarios.find(Filters.and(Filters.eq("nombre", nombre), Filters.eq("clave", clave))).first();
         if (usuario != null) {
             boolean admin = usuario.getBoolean("admin");
-            return List.of("Usuario Valido");
+            return List.of("Usuario Valido", admin ? "admin" : "medico", usuario.getString("grupo"));
         }
         return List.of("Invalido", "", "");
     }
