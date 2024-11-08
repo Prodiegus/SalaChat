@@ -88,12 +88,14 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         String destinatario = partes[1];
                         String mensajePrivado = partes[2];
 
+
                         // Buscar el destinatario en el mapa de clientes conectados
                         HiloDeCliente clienteDestino = clientesConectados.get(destinatario);
                         if (clienteDestino != null) {
                             clienteDestino.dataOutput.writeUTF("Mensaje privado de " + alias + ": " + mensajePrivado);
                         } else {
-                            dataOutput.writeUTF("El cliente " + destinatario + "no está conectado.");
+                            db.guardarMensaje(alias, "Mensaje privado a " + destinatario + ": " + mensajePrivado+"\n");
+                            db.guardarMensaje(destinatario, "Mensaje privado de " + alias + ": " + mensajePrivado+"\n");
                         }
                     }
                     else if (texto.startsWith("/grupo ")) {
@@ -151,7 +153,6 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     }
 
     private void notificarGrupo(String mensaje) {
-        DB db = new DB();
         for (HiloDeCliente cliente : clientesConectados.values()) {
             if (cliente.grupoActual.equals(grupoActual)) {
                 try {
