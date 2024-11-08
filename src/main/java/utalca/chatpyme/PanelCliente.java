@@ -1,9 +1,10 @@
 package utalca.chatpyme;
 
+import utalca.chatpyme.DB;
+
 import java.awt.BorderLayout;
 import java.awt.Container;
 import java.awt.event.ActionListener;
-
 import javax.swing.*;
 
 public class PanelCliente extends JPanel {
@@ -13,7 +14,7 @@ public class PanelCliente extends JPanel {
     private JTextArea textArea;
     private JTextField textField;
     private JButton boton;
-    private JButton limpiarBoton; // Declare the new button
+    private JButton limpiarBoton;
 
     private String alias;
 
@@ -30,11 +31,11 @@ public class PanelCliente extends JPanel {
 
         textField = new JTextField(50);
         boton = new JButton("Enviar");
-        limpiarBoton = new JButton("Limpiar"); // Initialize the new button
+        limpiarBoton = new JButton("Limpiar");
 
         panel2.add(usuarios, BorderLayout.NORTH);
         panel2.add(new JScrollPane(lista), BorderLayout.CENTER);
-        panel2.add(limpiarBoton, BorderLayout.SOUTH); // Add the new button below the list
+        panel2.add(limpiarBoton, BorderLayout.SOUTH);
 
         panelMensajes.add(scroll, BorderLayout.CENTER);
         panelMensajes.add(panel, BorderLayout.SOUTH);
@@ -45,7 +46,6 @@ public class PanelCliente extends JPanel {
         contenedor.add(panelMensajes, BorderLayout.CENTER);
         contenedor.add(panel2, BorderLayout.EAST);
 
-        // Add action listener to the new button
         limpiarBoton.addActionListener(e -> limpiarTexto());
     }
 
@@ -56,12 +56,12 @@ public class PanelCliente extends JPanel {
 
     public void addTexto(String texto){
         SwingUtilities.invokeLater(() -> {
-            textArea.append(texto + "\n");
+            textArea.append(texto.trim() + "\n");
             textArea.setCaretPosition(textArea.getDocument().getLength());
         });
         try {
             DB db = new DB();
-            db.guardarMensaje(alias, texto);
+            db.guardarMensaje(alias, texto.trim());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -69,13 +69,13 @@ public class PanelCliente extends JPanel {
 
     public void iniciarText(String texto){
         SwingUtilities.invokeLater(() -> {
-            textArea.append(texto + "\n");
+            textArea.append(texto.trim() + "\n");
             textArea.setCaretPosition(textArea.getDocument().getLength());
         });
     }
 
     public String getTexto(){
-        String texto = textField.getText();
+        String texto = textField.getText().trim();
         textField.setText("");
         return texto;
     }
@@ -88,8 +88,6 @@ public class PanelCliente extends JPanel {
         lista.setListData(usuarios);
     }
 
-
-    // Método para limpiar la ventana del chat
     public void limpiarTexto() {
         textArea.setText("");
         try {

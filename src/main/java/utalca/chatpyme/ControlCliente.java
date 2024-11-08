@@ -77,9 +77,11 @@ public class ControlCliente implements ActionListener, Runnable{
                 if (texto.startsWith("/usuarios ")) {
                     String usuarios = texto.substring(10);
                     panel.setUsuariosConectados(usuarios.split("\n"));
+                    panel.addTexto(texto+"\n");
+                    //panel.addTexto("\n");
                 } else {
-                    panel.addTexto(texto);
-                    panel.addTexto("\n");
+                    panel.addTexto(texto+"\n");
+                    //panel.addTexto("\n");
                 }
             }
         } catch (Exception e){
