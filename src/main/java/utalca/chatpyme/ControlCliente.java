@@ -14,10 +14,12 @@ public class ControlCliente implements ActionListener, Runnable{
     private PanelCliente panel;
     private DB db; // Instancia de la clase DB
     private String tipo;
+    private String alias;
     
     public ControlCliente(Socket socket, PanelCliente panel, String alias, String tipo){
         this.tipo = tipo;
         this.panel = panel;
+        this.alias = alias;
         this.db = new DB(); //inicializa la instancia de DB
         try{
             dataInput = new DataInputStream(socket.getInputStream());
@@ -63,7 +65,8 @@ public class ControlCliente implements ActionListener, Runnable{
                 dataOutput.writeUTF(mensaje);  // Enviar mensaje público al servidor
             }
             // Agregar mensaje a la base de datos
-            db.agregarMensaje(mensaje);
+            //db.agregarMensaje(mensaje);
+            db.guardarMensaje(alias, alias+": "+mensaje);
         } catch (Exception excepcion){
             excepcion.printStackTrace();
         }
