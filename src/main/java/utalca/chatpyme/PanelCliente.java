@@ -35,7 +35,6 @@ public class PanelCliente extends JPanel {
         scroll = new JScrollPane(textPane);
         lista = new JList<>();
         usuarios = new JLabel("Usuarios conectados");
-        scroll = new JScrollPane(textArea);
 
         JPanel panel = new JPanel(new BorderLayout());
         JPanel panel2 = new JPanel(new BorderLayout());
@@ -84,10 +83,13 @@ public class PanelCliente extends JPanel {
     }
 
     public void iniciarText(String texto){
-        SwingUtilities.invokeLater(() -> {
-            textArea.append(texto.trim() + "\n");
-            textArea.setCaretPosition(textArea.getDocument().getLength());
-        });
+        try {
+            // Obtenemos el documento y agregamos el texto HTML al final
+            HTMLDocument doc = (HTMLDocument) textPane.getDocument();
+            doc.insertAfterEnd(doc.getCharacterElement(doc.getLength()), texto + "<br>");
+        } catch (BadLocationException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public String getTexto(){

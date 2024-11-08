@@ -106,8 +106,30 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                             db.guardarMensaje(destinatario, "Mensaje privado de " + alias + ": " + mensajePrivado+"\n");
                         }
                     }
-                    
-                    else if (texto.startsWith("/grupo ")) {
+                    else if (texto.startsWith("/negrita ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<b>" + mensaje + "</b>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/cursiva ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<i>" + mensaje + "</i>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/subrayado ")) {
+                        String mensaje = texto.substring(12);
+                        mensaje = "<u>" + mensaje + "</u>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/crear ")) {
+                        if (tipo.equals("admin")) {
+                            String nombre = texto.split(" ")[1];
+                            String clave = texto.split(" ")[2];
+                            Boolean admin = texto.split(" ")[3].equals("admin");
+                            String grupo = texto.split(" ")[4];
+                            db.agregarUsuario(nombre, clave, admin, grupo);
+                            dataOutput.writeUTF("Usuario creado con éxito.");
+                        } else {
+                            dataOutput.writeUTF("No tienes permiso para crear usuarios.");
+                        }
+                    } else if (texto.startsWith("/grupo ")) {
                         String[] partes = texto.split(" ", 3); // Parte 1: /grupo, Parte 2: grupo, Parte 3: mensaje
                         String destinatario = partes[1];
                         String mensajePrivado = partes[2];
