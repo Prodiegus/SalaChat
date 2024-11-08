@@ -16,6 +16,8 @@ public class PanelCliente extends JPanel {
     private JTextField textField;
     private JButton boton;
 
+    private String alias;
+
     public PanelCliente(Container contenedor){
         contenedor.setLayout(new BorderLayout());
         textArea = new JTextArea();
@@ -37,6 +39,12 @@ public class PanelCliente extends JPanel {
     }
 
     public void addTexto(String texto){
+        DB db = new DB();
+        textArea.append(texto);
+        db.guardarMensaje(alias, texto);
+    }
+
+    public void iniciarText(String texto){
         textArea.append(texto);
     }
 
@@ -44,6 +52,10 @@ public class PanelCliente extends JPanel {
         String texto = textField.getText();
         textField.setText("");
         return texto;
+    }
+
+    public void setAlias(String alias){
+        this.alias = alias;
     }
 
     // Método para limpiar la ventana del chat

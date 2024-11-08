@@ -125,8 +125,14 @@ public class ClienteChat{
 
     // Modificación para recibir el alias como parámetro y usarlo en el título de la ventana
     private void creaYVisualizaVentana(String alias) {
+        DB db = new DB();
         JFrame v = new JFrame(alias);  // Establece el alias como título de la ventana
         panel = new PanelCliente(v.getContentPane());
+        panel.setAlias(alias);
+        List<String> mensajes = db.verMensajes(alias);
+        for (String mensaje : mensajes) {
+            panel.iniciarText(mensaje);
+        }
         v.pack();
         v.setVisible(true);
         v.setSize(600, 300);
