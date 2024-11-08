@@ -92,6 +92,30 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                             dataOutput.writeUTF("El cliente " + destinatario + " no está conectado.");
                         }
                     }
+                    else if (texto.startsWith("/grupo ")) {
+                        String[] partes = texto.split(" ", 3);
+                        String destinatario = partes[1];
+                        String mensajePrivado = partes[2];
+
+                        // Verificar si el destinatario es un grupo
+                        if (grupos.containsKey(destinatario)) {
+                            // Enviar el mensaje solo a los miembros del grupo actual
+                            DefaultListModel<String> mensajesGrupo = grupos.get(destinatario);
+                            synchronized (mensajesGrupo) {
+                                mensajesGrupo.addElement(alias + ": " + mensajePrivado);
+                                // Notificar a todos los clientes en el grupo
+                                for (HiloDeCliente cliente : clientesConectados.values()) {
+                                    if (cliente.grupoActual.equals(destinatario)) { // Ahora verifica el grupo destinatario
+                                        db.guardarMensaje(alias, "[" + grupoActual + "]" + alias + ": " + mensajePrivado);
+                                        cliente.dataOutput.writeUTF("["+grupoActual+"]" + alias + ": " + mensajePrivado);
+                                    }
+                                }
+                                
+                            }
+                        } else {
+                            dataOutput.writeUTF("El grupo " + destinatario + " no existe.");
+                        }
+                    }
                     // Mensaje a todos los clientes
                     else if (texto.startsWith("/all ")) {
                         String mensaje = texto.substring(5); // Extrae el mensaje después del comando
