@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import javax.swing.DefaultListModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
@@ -14,6 +15,7 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     private DataInputStream dataInput;
     private DataOutputStream dataOutput;
     private String alias;
+    private String tipo;
     private String grupoActual; // Grupo actual al que pertenece el cliente
     private Map<String, DefaultListModel<String>> grupos;
     private static Map<String, HiloDeCliente> clientesConectados = new HashMap<>(); // Mapa de alias a hilos
@@ -46,9 +48,10 @@ public class HiloDeCliente implements Runnable, ListDataListener {
 
                         // Inicializar grupos si es necesario
                         grupos.putIfAbsent("medico", new DefaultListModel<>());
-                        grupos.putIfAbsent("administrador", new DefaultListModel<>());
+                        grupos.putIfAbsent("admin", new DefaultListModel<>());
                         // Asignar el grupo por defecto
-                        grupoActual = "medico";
+                        this.grupoActual = db.verUsuario(alias).get(3);
+                        this.tipo = db.verUsuario(alias).get(2);
                         grupos.get(grupoActual).addElement(alias + " se ha conectado.");
                         // Notificar a todos los miembros del grupo que el nuevo cliente se ha unido
                         notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
@@ -57,11 +60,17 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                     // Comando para unirse a un grupo
                     else if (texto.startsWith("/unir ")) {
                         String nuevoGrupo = texto.split(" ")[1];
-                        if (grupos.containsKey(nuevoGrupo)) {
+                        if (Objects.equals(nuevoGrupo, "admin") && !Objects.equals(tipo, "admin")) {
+                            dataOutput.writeUTF("No tienes permiso para unirte al grupo admin.");
+                            run();
+                        } else if (nuevoGrupo.equals(grupoActual)) {
+                            dataOutput.writeUTF("Ya estás en el grupo " + grupoActual);
+                        } else if (grupos.containsKey(nuevoGrupo)) {
                             grupos.get(grupoActual).removeElement(alias + " se ha desconectado de " + grupoActual);
                             grupoActual = nuevoGrupo;
                             grupos.get(grupoActual).addElement(alias + " se ha unido a " + grupoActual);
                             // Notificar a todos los miembros del nuevo grupo
+                            db.actualizarUsuario(alias, tipo.equals("admin"), grupoActual);
                             notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
                             dataOutput.writeUTF("Te has unido al grupo: " + grupoActual);
                         } else {
@@ -88,6 +97,8 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         for (HiloDeCliente cliente : clientesConectados.values()) {
                             cliente.dataOutput.writeUTF("[Todos]" + alias + ": " + mensaje);
                         }
+                    } else if (texto.startsWith("/tipo ")) {
+                        this.tipo = texto.split(" ")[1];
                     }
                     // Mensaje de grupo
                     else {
@@ -111,9 +122,11 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     }
 
     private void notificarGrupo(String mensaje) {
+        DB db = new DB();
         for (HiloDeCliente cliente : clientesConectados.values()) {
             if (cliente.grupoActual.equals(grupoActual)) {
                 try {
+                    db.guardarMensaje(alias, mensaje);
                     cliente.dataOutput.writeUTF(mensaje);
                 } catch (IOException e) {
                     e.printStackTrace(); // Manejo de la excepción

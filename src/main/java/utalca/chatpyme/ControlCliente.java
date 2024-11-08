@@ -13,17 +13,23 @@ public class ControlCliente implements ActionListener, Runnable{
     private DataOutputStream dataOutput;
     private PanelCliente panel;
     private DB db; // Instancia de la clase DB
+    private String tipo;
     
-    public ControlCliente(Socket socket, PanelCliente panel, String alias){
+    public ControlCliente(Socket socket, PanelCliente panel, String alias, String tipo){
+        this.tipo = tipo;
         this.panel = panel;
         this.db = new DB(); //inicializa la instancia de DB
         try{
             dataInput = new DataInputStream(socket.getInputStream());
             dataOutput = new DataOutputStream(socket.getOutputStream());
             panel.addActionListener(this);
-    
-            // Enviar el alias del cliente al servidor
+            panel.addTexto("Conectado como " + alias + "\n");
+            panel.addTexto("Tipo de usuario: " + tipo + "\n");
+
+            dataOutput.writeUTF("/tipo " + tipo);
+            Thread.sleep(1000);
             dataOutput.writeUTF("/alias " + alias);
+
     
             // Iniciar hilo
             Thread hilo = new Thread(this);
@@ -40,7 +46,13 @@ public class ControlCliente implements ActionListener, Runnable{
     
             // Si el mensaje es para unirse a un grupo
             if (mensaje.startsWith("/unir ")) {
-                dataOutput.writeUTF(mensaje);  // Enviar comando para unirse a un grupo
+                String nuevoGrupo = mensaje.split(" ")[1];
+                if (nuevoGrupo.equals("admin") && !tipo.equals("admin")) {
+                    panel.addTexto("No tienes permisos para unirte al grupo 'admin'.\n");
+                } else{
+                    dataOutput.writeUTF(mensaje);
+                    panel.addTexto("Uniendo al grupo " + nuevoGrupo + ".\n");
+                }
             }
             // Si el mensaje es un mensaje privado
             else if (mensaje.startsWith("/privado ")) {
