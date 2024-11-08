@@ -39,9 +39,13 @@ public class PanelCliente extends JPanel {
     }
 
     public void addTexto(String texto){
-        DB db = new DB();
         textArea.append(texto);
-        db.guardarMensaje(alias, texto);
+        try {
+            DB db = new DB();
+            db.guardarMensaje(alias, texto);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public void iniciarText(String texto){
