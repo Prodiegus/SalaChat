@@ -14,6 +14,8 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 
+import javax.swing.*;
+
 public class DB {
     private MongoClient mongoClient;
     private MongoDatabase database;

@@ -49,12 +49,9 @@ public class ControlCliente implements ActionListener, Runnable{
             // Si el mensaje es para unirse a un grupo
             if (mensaje.startsWith("/unir ")) {
                 String nuevoGrupo = mensaje.split(" ")[1];
-                if (nuevoGrupo.equals("admin") && !tipo.equals("admin")) {
-                    panel.addTexto("No tienes permisos para unirte al grupo 'admin'.\n");
-                } else{
-                    dataOutput.writeUTF(mensaje);
-                    panel.addTexto("Uniendo al grupo " + nuevoGrupo + ".\n");
-                }
+                dataOutput.writeUTF(mensaje);
+                panel.addTexto("Uniendo al grupo " + nuevoGrupo + ".\n");
+                db.actualizarUsuario(alias, tipo.equals("admin") ,nuevoGrupo);
             }
             // Si el mensaje es un mensaje privado
             else if (mensaje.startsWith("/privado ")) {
