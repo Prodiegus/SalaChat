@@ -51,11 +51,15 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         grupos.putIfAbsent("medico", new DefaultListModel<>());
                         grupos.putIfAbsent("admin", new DefaultListModel<>());
                         grupos.putIfAbsent("auxiliar", new DefaultListModel<>());
+                        grupos.putIfAbsent("admicion", new DefaultListModel<>());
+                        grupos.putIfAbsent("pabellon", new DefaultListModel<>());
+                        grupos.putIfAbsent("examenes", new DefaultListModel<>());
                         // Asignar el grupo por defecto
                         this.grupoActual = db.verUsuario(alias).get(3);
                         this.tipo = db.verUsuario(alias).get(2);
                         grupos.get(grupoActual).addElement(alias + " se ha conectado.");
                         // Notificar a todos los miembros del grupo que el nuevo cliente se ha unido
+                        enviarUsuariosConectadosATodos();
                         notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
                     }
 
@@ -156,6 +160,26 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                     e.printStackTrace(); // Manejo de la excepción
                 }
             }
+        }
+    }
+
+    private void enviarUsuariosConectadosATodos() {
+        for (HiloDeCliente cliente : clientesConectados.values()) {
+            cliente.enviarUsuariosConectados();
+        }
+    }
+
+    private void enviarUsuariosConectados() {
+        try {
+            StringBuilder usuariosConectados = new StringBuilder();
+            for (Map.Entry<String, HiloDeCliente> entry : clientesConectados.entrySet()) {
+                String usuario = entry.getKey();
+                String grupo = entry.getValue().grupoActual;
+                usuariosConectados.append(usuario).append(" (").append(grupo).append(")\n");
+            }
+            dataOutput.writeUTF("/usuarios " + usuariosConectados.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 

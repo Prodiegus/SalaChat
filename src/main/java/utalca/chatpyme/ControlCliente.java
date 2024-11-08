@@ -74,8 +74,13 @@ public class ControlCliente implements ActionListener, Runnable{
         try{
             while (true){
                 String texto = dataInput.readUTF();
-                panel.addTexto(texto);
-                panel.addTexto("\n");
+                if (texto.startsWith("/usuarios ")) {
+                    String usuarios = texto.substring(10);
+                    panel.setUsuariosConectados(usuarios.split("\n"));
+                } else {
+                    panel.addTexto(texto);
+                    panel.addTexto("\n");
+                }
             }
         } catch (Exception e){
             e.printStackTrace();

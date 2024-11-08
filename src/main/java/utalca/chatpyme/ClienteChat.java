@@ -139,7 +139,16 @@ public class ClienteChat{
         }
         v.pack();
         v.setVisible(true);
-        v.setSize(600, 300);
+        v.setSize(800, 300);
         v.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        String tipo = "medico";
+        try {
+            DB db = new DB();
+            tipo = db.verUsuario(alias).get(3);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        new ControlCliente(socket, panel, alias, tipo);
     }
 }
