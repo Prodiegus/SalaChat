@@ -14,6 +14,8 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 
+import javax.swing.*;
+
 public class DB {
     private MongoClient mongoClient;
     private MongoDatabase database;
@@ -49,6 +51,24 @@ public class DB {
             return List.of(usuario.getString("nombre"), usuario.getString("clave"), usuario.getBoolean("admin") ? "admin" : "medico", usuario.getString("grupo"));
         }
         return List.of("", "", "medico", "");
+    }
+
+    public List<String> getCantidadDeMensajesQueEnviaCadaUsuario() {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        List<String> mensajes = new ArrayList<>();
+        usuarios.find().forEach(usuario -> {
+            String nombre = usuario.getString("nombre");
+            List<String> mensajesUsuario = (List<String>) usuario.get("mensajes");
+            int cantidadMensajes = 0;
+            for (String mensaje : mensajesUsuario) {
+                String autor = mensaje.split(":")[0];
+                if (autor.contains(nombre)) {
+                    cantidadMensajes++;
+                }
+            }
+            mensajes.add(nombre + ": " + cantidadMensajes);
+        });
+        return mensajes;
     }
 
     //Método para agregar un mensaje
@@ -125,6 +145,33 @@ public class DB {
         return List.of("Invalido", "", "");
     }
 
+    public void vaciarMensaje(String nombreUsuario) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        usuarios.updateOne(Filters.eq("nombre", nombreUsuario),
+                Updates.combine(
+                        Updates.set("mensajes", new ArrayList<String>())
+                ));
+    }
+
+    public List<String> cantidadDeMensajesEnCadaGrupo() {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        List<String> mensajes = new ArrayList<>();
+        usuarios.find().forEach(usuario -> {
+            String grupo = usuario.getString("grupo");
+            List<String> mensajesUsuario = (List<String>) usuario.get("mensajes");
+            int cantidadMensajes = 0;
+            for (String mensaje : mensajesUsuario) {
+                String grup = mensaje.split(":")[0];
+                if (grup.contains(grupo)) {
+                    cantidadMensajes++;
+                }
+            }
+            mensajes.add(grupo + ": " + cantidadMensajes);
+        });
+        return mensajes;
+    }
+
+
     public static void main(String[] args) {
         DB db = new DB();
         Scanner scanner = new Scanner(System.in);
@@ -141,6 +188,7 @@ public class DB {
             System.out.println("7. Eliminar mensaje");
             System.out.println("8. Actualizar mensaje");
             System.out.println("9. Ver mensajes");
+            System.out.println("10. Estadisticas mensajes entre usuarios");
             System.out.println("0. Salir");
             System.out.print("Seleccione una opción: ");
             opcion = scanner.nextInt();
@@ -191,7 +239,9 @@ public class DB {
                     mensajes.add(mensaje);
                     break;
                 case 7:
-                    // Implementar método eliminarMensaje si es necesario
+                    System.out.print("Nombre del usuario: ");
+                    nombre = scanner.nextLine();
+                    db.vaciarMensaje(nombre);
                     break;
                 case 8:
                     // Implementar método actualizarMensaje si es necesario
@@ -201,6 +251,22 @@ public class DB {
                     nombre = scanner.nextLine();
                     List<String> mensajesUsuario = db.verMensajes(nombre);
                     System.out.println("Mensajes del usuario: " + mensajesUsuario);
+                    break;
+                case 10:
+                    System.out.println("Cantidad de mensajes que envía cada usuario:");
+                    List<String> mensajesUsuarios = db.getCantidadDeMensajesQueEnviaCadaUsuario();
+                    for (String mensajeUsuario : mensajesUsuarios) {
+                        System.out.println(mensajeUsuario);
+                    }
+                    System.out.print("presione enter para continuar...");
+                    scanner.nextLine();
+                    System.out.println("Cantidad de mensajes en cada grupo:");
+                    List<String> mensajesGrupos = db.cantidadDeMensajesEnCadaGrupo();
+                    for (String mensajeGrupo : mensajesGrupos) {
+                        System.out.println(mensajeGrupo);
+                    }
+                    System.out.print("presione enter para continuar...");
+                    scanner.nextLine();
                     break;
                 case 0:
                     System.out.println("Saliendo...");

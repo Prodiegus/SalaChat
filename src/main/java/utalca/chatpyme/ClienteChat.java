@@ -4,14 +4,7 @@ import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
 
-import javax.swing.GroupLayout;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
-import javax.swing.WindowConstants;
+import javax.swing.*;
 
 /**
  * @author RPVZ
@@ -100,10 +93,10 @@ public class ClienteChat{
                     if (res.get(0).equals("Invalido")) { // Verifica si el usuario está en la base de datos
                         try{
                             db.agregarUsuario(alias, password, false, "medico");  // Agrega usuario a la base de datos
-                            
+
                             // Pasar el alias al ControlCliente
                             // ControlCliente control = new ControlCliente(socket, panel, alias);
-        
+
                         } catch (Exception e){
                             JOptionPane.showMessageDialog(null, "Usuario o contraseña erronea");
                             return;
@@ -125,11 +118,31 @@ public class ClienteChat{
 
     // Modificación para recibir el alias como parámetro y usarlo en el título de la ventana
     private void creaYVisualizaVentana(String alias) {
-        JFrame v = new JFrame(alias);  // Establece el alias como título de la ventana
-        panel = new PanelCliente(v.getContentPane());
-        v.pack();
-        v.setVisible(true);
-        v.setSize(600, 300);
-        v.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        SwingUtilities.invokeLater(() -> {
+            JFrame v = new JFrame(alias);  // Establece el alias como título de la ventana
+            panel = new PanelCliente(v.getContentPane());
+            panel.setAlias(alias);
+            try {
+                DB db = new DB();
+                List<String> mensajes = db.verMensajes(alias);
+                for (String mensaje : mensajes) {
+                    panel.iniciarText(mensaje);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            v.pack();
+            v.setVisible(true);
+            v.setSize(800, 300);
+            v.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+            String tipo = "medico";
+            try {
+                DB db = new DB();
+                tipo = db.verUsuario(alias).get(3);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            new ControlCliente(socket, panel, alias, tipo);
+        });
     }
 }

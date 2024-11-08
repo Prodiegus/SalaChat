@@ -30,7 +30,6 @@ public class HiloDeCliente implements Runnable, ListDataListener {
             e.printStackTrace();
         }
     }
-
     @Override
     public void run() {
         try {
@@ -41,6 +40,8 @@ public class HiloDeCliente implements Runnable, ListDataListener {
 
                 while (true) {
                     String texto = dataInput.readUTF();
+                    String mensajeCompleto = alias + ": " + texto;
+
                     // Si el cliente envía su alias
                     if (texto.startsWith("/alias ")) {
                         this.alias = texto.split(" ")[1];
@@ -49,11 +50,16 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         // Inicializar grupos si es necesario
                         grupos.putIfAbsent("medico", new DefaultListModel<>());
                         grupos.putIfAbsent("admin", new DefaultListModel<>());
+                        grupos.putIfAbsent("auxiliar", new DefaultListModel<>());
+                        grupos.putIfAbsent("admicion", new DefaultListModel<>());
+                        grupos.putIfAbsent("pabellon", new DefaultListModel<>());
+                        grupos.putIfAbsent("examenes", new DefaultListModel<>());
                         // Asignar el grupo por defecto
                         this.grupoActual = db.verUsuario(alias).get(3);
                         this.tipo = db.verUsuario(alias).get(2);
                         grupos.get(grupoActual).addElement(alias + " se ha conectado.");
                         // Notificar a todos los miembros del grupo que el nuevo cliente se ha unido
+                        enviarUsuariosConectadosATodos();
                         notificarGrupo("¡" + alias + " se ha unido al grupo " + grupoActual + "!");
                     }
 
@@ -62,7 +68,6 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         String nuevoGrupo = texto.split(" ")[1];
                         if (Objects.equals(nuevoGrupo, "admin") && !Objects.equals(tipo, "admin")) {
                             dataOutput.writeUTF("No tienes permiso para unirte al grupo admin.");
-                            run();
                         } else if (nuevoGrupo.equals(grupoActual)) {
                             dataOutput.writeUTF("Ya estás en el grupo " + grupoActual);
                         } else if (grupos.containsKey(nuevoGrupo)) {
@@ -95,14 +100,36 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         // Buscar el destinatario en el mapa de clientes conectados
                         HiloDeCliente clienteDestino = clientesConectados.get(destinatario);
                         if (clienteDestino != null) {
-                            db.guardarMensaje(alias, "[Privado]" + alias + ": " + mensajePrivado);
                             clienteDestino.dataOutput.writeUTF("Mensaje privado de " + alias + ": " + mensajePrivado);
                         } else {
-                            dataOutput.writeUTF("El cliente " + destinatario + " no está conectado.");
+                            db.guardarMensaje(alias, "Mensaje privado a " + destinatario + ": " + mensajePrivado+"\n");
+                            db.guardarMensaje(destinatario, "Mensaje privado de " + alias + ": " + mensajePrivado+"\n");
                         }
                     }
-                    
-                    else if (texto.startsWith("/grupo ")) {
+                    else if (texto.startsWith("/negrita ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<b>" + mensaje + "</b>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/cursiva ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<i>" + mensaje + "</i>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/subrayado ")) {
+                        String mensaje = texto.substring(12);
+                        mensaje = "<u>" + mensaje + "</u>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/crear ")) {
+                        if (tipo.equals("admin")) {
+                            String nombre = texto.split(" ")[1];
+                            String clave = texto.split(" ")[2];
+                            Boolean admin = texto.split(" ")[3].equals("admin");
+                            String grupo = texto.split(" ")[4];
+                            db.agregarUsuario(nombre, clave, admin, grupo);
+                            dataOutput.writeUTF("Usuario creado con éxito.");
+                        } else {
+                            dataOutput.writeUTF("No tienes permiso para crear usuarios.");
+                        }
+                    } else if (texto.startsWith("/grupo ")) {
                         String[] partes = texto.split(" ", 3); // Parte 1: /grupo, Parte 2: grupo, Parte 3: mensaje
                         String destinatario = partes[1];
                         String mensajePrivado = partes[2];
@@ -139,7 +166,6 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                     else if (texto.startsWith("/all ")) {
                         String mensaje = texto.substring(5); // Extrae el mensaje después del comando
                         for (HiloDeCliente cliente : clientesConectados.values()) {
-                            db.guardarMensaje(alias, "[Todos]" + alias + ": " + mensaje);
                             cliente.dataOutput.writeUTF("[Todos]" + alias + ": " + mensaje);
                         }
                     } else if (texto.startsWith("/tipo ")) {
@@ -154,13 +180,11 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                             // Notificar a todos los clientes en el grupo
                             for (HiloDeCliente cliente : clientesConectados.values()) {
                                 if (cliente.grupoActual.equals(grupoActual)) {
-                                    db.guardarMensaje(alias, "[" + grupoActual + "]" + alias + ": " + texto);
                                     cliente.dataOutput.writeUTF("["+grupoActual+"]"+alias + ": " + texto);
                                 }
                             }
                         }
                     }
-                    db.guardarMensaje(alias, alias + ": " + texto);
                 }
             }
         } catch (Exception e) {
@@ -169,16 +193,34 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     }
 
     private void notificarGrupo(String mensaje) {
-        DB db = new DB();
         for (HiloDeCliente cliente : clientesConectados.values()) {
             if (cliente.grupoActual.equals(grupoActual)) {
                 try {
-                    db.guardarMensaje(alias, "[" + grupoActual + "]" + mensaje);
                     cliente.dataOutput.writeUTF(mensaje);
                 } catch (IOException e) {
                     e.printStackTrace(); // Manejo de la excepción
                 }
             }
+        }
+    }
+
+    private void enviarUsuariosConectadosATodos() {
+        for (HiloDeCliente cliente : clientesConectados.values()) {
+            cliente.enviarUsuariosConectados();
+        }
+    }
+
+    private void enviarUsuariosConectados() {
+        try {
+            StringBuilder usuariosConectados = new StringBuilder();
+            for (Map.Entry<String, HiloDeCliente> entry : clientesConectados.entrySet()) {
+                String usuario = entry.getKey();
+                String grupo = entry.getValue().grupoActual;
+                usuariosConectados.append(usuario).append(" (").append(grupo).append(")\n");
+            }
+            dataOutput.writeUTF("/usuarios " + usuariosConectados.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
         }
     }
 
