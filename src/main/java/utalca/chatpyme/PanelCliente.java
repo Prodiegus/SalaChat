@@ -13,6 +13,7 @@ public class PanelCliente extends JPanel {
     private JTextArea textArea;
     private JTextField textField;
     private JButton boton;
+    private JButton limpiarBoton; // Declare the new button
 
     private String alias;
 
@@ -29,9 +30,11 @@ public class PanelCliente extends JPanel {
 
         textField = new JTextField(50);
         boton = new JButton("Enviar");
+        limpiarBoton = new JButton("Limpiar"); // Initialize the new button
 
         panel2.add(usuarios, BorderLayout.NORTH);
         panel2.add(new JScrollPane(lista), BorderLayout.CENTER);
+        panel2.add(limpiarBoton, BorderLayout.SOUTH); // Add the new button below the list
 
         panelMensajes.add(scroll, BorderLayout.CENTER);
         panelMensajes.add(panel, BorderLayout.SOUTH);
@@ -41,6 +44,9 @@ public class PanelCliente extends JPanel {
 
         contenedor.add(panelMensajes, BorderLayout.CENTER);
         contenedor.add(panel2, BorderLayout.EAST);
+
+        // Add action listener to the new button
+        limpiarBoton.addActionListener(e -> limpiarTexto());
     }
 
     public void addActionListener(ActionListener accion){
@@ -86,5 +92,11 @@ public class PanelCliente extends JPanel {
     // Método para limpiar la ventana del chat
     public void limpiarTexto() {
         textArea.setText("");
+        try {
+            DB db = new DB();
+            db.vaciarMensaje(alias);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 }
