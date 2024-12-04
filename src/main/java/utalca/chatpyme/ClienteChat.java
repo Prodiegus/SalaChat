@@ -85,7 +85,7 @@ public class ClienteChat{
 
                 try {
                     // Conectar al servidor
-                    socket = new Socket("localhost", 5000);
+                    socket = new Socket("34.56.99.254", 5000);
                     DataOutputStream dataOutput = new DataOutputStream(socket.getOutputStream());
 
                     dataOutput.writeUTF(alias);
