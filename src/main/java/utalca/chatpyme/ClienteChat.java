@@ -3,6 +3,7 @@ import java.io.DataOutputStream;
 import java.net.Socket;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.atomic.AtomicReference;
 
 import javax.swing.*;
 
@@ -124,10 +125,28 @@ public class ClienteChat{
             panel.setAlias(alias);
             try {
                 DB db = new DB();
-                List<String> mensajes = db.verMensajes(alias);
-                for (String mensaje : mensajes) {
-                    panel.iniciarText(mensaje);
-                }
+                Runnable fetchMessagesTask = () -> {
+                    boolean success = false;
+                    while (!success) {
+                        try {
+                            List<String> mensajes = db.verMensajes(alias);
+                            SwingUtilities.invokeLater(() -> {
+                                for (String mensaje : mensajes) {
+                                    panel.iniciarText(mensaje);
+                                }
+                            });
+                            success = true;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            try {
+                                Thread.sleep(5000); // Wait 5 seconds before retrying
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+                };
+                new Thread(fetchMessagesTask).start();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -135,14 +154,30 @@ public class ClienteChat{
             v.setVisible(true);
             v.setSize(800, 300);
             v.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
-            String tipo = "medico";
+            AtomicReference<String> tipo = new AtomicReference<>("medico");
             try {
                 DB db = new DB();
-                tipo = db.verUsuario(alias).get(3);
+                Runnable fetchMessagesTask = () -> {
+                    boolean success = false;
+                    while (!success) {
+                        try {
+                            tipo.set(db.verUsuario(alias).get(3));
+                            success = true;
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                            try {
+                                Thread.sleep(5000); // Wait 5 seconds before retrying
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                            }
+                        }
+                    }
+                };
+                new Thread(fetchMessagesTask).start();
             } catch (Exception e) {
                 e.printStackTrace();
             }
-            new ControlCliente(socket, panel, alias, tipo);
+            new ControlCliente(socket, panel, alias, tipo.get());
         });
     }
 }

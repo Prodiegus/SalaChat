@@ -1,9 +1,13 @@
 package utalca.chatpyme;
 
+import java.io.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bson.Document;
 
@@ -80,17 +84,58 @@ public class DB {
     }
 
     public void guardarMensaje(String nombre, String contenido) {
-        MongoCollection<Document> usuarios = getUsuariosCollection();
-        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
-        if (usuario != null) {
-            List<String> mensajes = (List<String>) usuario.get("mensajes");
-            mensajes.add(contenido);
-            usuarios.updateOne(Filters.eq("nombre", nombre),
-                               Updates.combine(
-                                   Updates.set("mensajes", mensajes)
-                               ));
+        try {
+            MongoCollection<Document> usuarios = getUsuariosCollection();
+            Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+            if (usuario != null) {
+                List<String> mensajes = (List<String>) usuario.get("mensajes");
+                mensajes.add(contenido);
+                usuarios.updateOne(Filters.eq("nombre", nombre),
+                        Updates.combine(
+                                Updates.set("mensajes", mensajes)
+                        ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Serialize the query to a file
+            serializeQuery(nombre, contenido);
+            // Start a thread to retry the operation
+            startRetryThread();
         }
     }
+
+    private void serializeQuery(String nombre, String contenido) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("query.ser"))) {
+            oos.writeObject(new Query(nombre, contenido));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startRetryThread() {
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.scheduleAtFixedRate(() -> {
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("query.ser"))) {
+                Query query = (Query) ois.readObject();
+                guardarMensaje(query.nombre, query.contenido);
+                new File("query.ser").delete(); // Delete the file after successful execution
+                executor.shutdown();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, 5, TimeUnit.SECONDS); // Retry every 5 seconds
+    }
+
+    private static class Query implements Serializable {
+        String nombre;
+        String contenido;
+
+        Query(String nombre, String contenido) {
+            this.nombre = nombre;
+            this.contenido = contenido;
+        }
+    }
+
 
     // Método para eliminar un usuario
     public void eliminarUsuario(String nombre) {
