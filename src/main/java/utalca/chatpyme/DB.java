@@ -25,7 +25,9 @@ public class DB {
     private MongoDatabase database;
 
     public DB() {
-        mongoClient = MongoClients.create("mongodb://34.56.99.254:27017");
+        mongoClient = MongoClients.create(
+                "mongodb+srv://tvalenzuela20:contrasenaSD@clustersd.iezyv.mongodb.net/?retryWrites=true&w=majority&appName=ClusterSD"
+        );
         database = mongoClient.getDatabase("chatpyme");
     }
 
