@@ -71,6 +71,24 @@
                 </configuration>
             </plugin>
             <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-dependency-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-dependencies</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>copy-dependencies</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
                 <version>0.0.8</version>
@@ -78,7 +96,7 @@
                     <execution>
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>utalca.chatpyme/utalca.chatpyme.HelloApplication</mainClass>
+                            <mainClass>utalca.chatpyme/utalca.chatpyme.ServidorChat</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>
@@ -90,13 +108,6 @@
                                     <mainClass>utalca.chatpyme.ServidorChat</mainClass>
                                 </transformer>
                             </transformers>
-                        </configuration>
-                    </execution>
-                    <execution>
-                        <id>copy-dependencies</id>
-                        <phase>package</phase>
-                        <configuration>
-                            <outputDirectory>${project.build.directory}/dependency</outputDirectory>
                         </configuration>
                     </execution>
                 </executions>
