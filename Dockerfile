@@ -21,7 +21,7 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # Copy the packaged jar file from the build stage
-COPY --from=build /app/target/dependency/*.jar lib/
+COPY --from=build /app/target/chatpyme-1.0-SNAPSHOT.jar app.jar
 
 # Set the entry point to run the application
-CMD ["java", "-cp", "app.jar:lib/*", "utalca.chatpyme.ServidorChat"]
+CMD ["java", "-jar", "app.jar"]

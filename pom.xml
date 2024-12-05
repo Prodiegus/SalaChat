@@ -96,7 +96,7 @@
                     <execution>
                         <id>default-cli</id>
                         <configuration>
-                            <mainClass>utalca.chatpyme/utalca.chatpyme.ServidorChat</mainClass>
+                            <mainClass>utalca.chatpyme/utalca.chatpyme.HelloAplication</mainClass>
                             <launcher>app</launcher>
                             <jlinkZipName>app</jlinkZipName>
                             <jlinkImageName>app</jlinkImageName>
