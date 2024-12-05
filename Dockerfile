@@ -23,5 +23,8 @@ WORKDIR /app
 # Copy the packaged jar file from the build stage
 COPY --from=build /app/target/*.jar app.jar
 
+# Copy the dependencies
+COPY --from=build /root/.m2/repository /root/.m2/repository
+
 # Set the entry point to run the application
-CMD ["java", "-jar", "app.jar"]
+CMD ["java", "-cp", "app.jar:/root/.m2/repository/*", "utalca.chatpyme.ServidorChat"]
