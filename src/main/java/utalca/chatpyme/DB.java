@@ -25,7 +25,7 @@ public class DB {
     private MongoDatabase database;
 
     public DB() {
-        mongoClient = MongoClients.create("mongodb://34.132.115.105:27017");
+        mongoClient = MongoClients.create("mongodb://34.56.99.254:27017");
         database = mongoClient.getDatabase("chatpyme");
     }
 
