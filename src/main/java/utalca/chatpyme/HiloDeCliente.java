@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
 import javax.swing.DefaultListModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
@@ -96,7 +97,7 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                         } else if (mensajePrivado.startsWith("/subrayado ")) {
                             mensajePrivado = "<u>" + mensajePrivado.substring(12) + "</u>"; // Elimina "/subrayado " y aplica formato
                         }
-                    
+                        this.dataOutput.writeUTF("[Privado a " + destinatario + "]: " + mensajePrivado);
                         // Buscar el destinatario en el mapa de clientes conectados
                         HiloDeCliente clienteDestino = clientesConectados.get(destinatario);
                         if (clienteDestino != null) {
