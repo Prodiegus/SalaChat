@@ -21,7 +21,6 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 # Copy the packaged jar file from the build stage
-COPY --from=build /app/target/chatpyme-1.0-SNAPSHOT-shaded.jar app.jar
 COPY --from=build /app/target/dependency/*.jar lib/
 
 # Set the entry point to run the application
