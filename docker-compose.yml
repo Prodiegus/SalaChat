@@ -4,5 +4,3 @@ services:
     ports:
       - "5000:5000"
     container_name: servidor_chat
-    depends_on:
-      - mongodb
