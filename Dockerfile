@@ -20,8 +20,9 @@ FROM eclipse-temurin:17-jdk
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the shaded jar file from the build stage
-COPY --from=build /app/target/*-shaded.jar app.jar
+# Copy the packaged jar file from the build stage
+COPY --from=build /app/target/chatpyme-1.0-SNAPSHOT-shaded.jar app.jar
+COPY --from=build /app/target/dependency/*.jar lib/
 
 # Set the entry point to run the application
-CMD ["java", "-jar", "app.jar"]
+CMD ["java", "-cp", "app.jar:lib/*", "utalca.chatpyme.ServidorChat"]
