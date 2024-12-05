@@ -6,9 +6,20 @@ services:
       - "27017:27017"
     volumes:
       - ./data:/data/db
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=example
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+        reservations:
+          memory: 512m
 
   servidor-chat:
     build: .
     ports:
       - "5000:5000"
     container_name: servidor_chat
+    depends_on:
+      - mongodb
