@@ -1,9 +1,13 @@
 package utalca.chatpyme;
 
+import java.io.*;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 import org.bson.Document;
 
@@ -21,7 +25,9 @@ public class DB {
     private MongoDatabase database;
 
     public DB() {
-        mongoClient = MongoClients.create("mongodb://34.132.115.105:27017");
+        mongoClient = MongoClients.create(
+                "mongodb+srv://tvalenzuela20:contrasenaSD@clustersd.iezyv.mongodb.net/?retryWrites=true&w=majority&appName=ClusterSD"
+        );
         database = mongoClient.getDatabase("chatpyme");
     }
 
@@ -53,6 +59,24 @@ public class DB {
         return List.of("", "", "medico", "");
     }
 
+    public List<String> getCantidadDeMensajesQueEnviaCadaUsuario() {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        List<String> mensajes = new ArrayList<>();
+        usuarios.find().forEach(usuario -> {
+            String nombre = usuario.getString("nombre");
+            List<String> mensajesUsuario = (List<String>) usuario.get("mensajes");
+            int cantidadMensajes = 0;
+            for (String mensaje : mensajesUsuario) {
+                String autor = mensaje.split(":")[0];
+                if (autor.contains(nombre)) {
+                    cantidadMensajes++;
+                }
+            }
+            mensajes.add(nombre + ": " + cantidadMensajes);
+        });
+        return mensajes;
+    }
+
     //Método para agregar un mensaje
     public void agregarMensaje(String contenido) {
         MongoCollection<Document> mensajes = getMensajesCollection();
@@ -62,17 +86,58 @@ public class DB {
     }
 
     public void guardarMensaje(String nombre, String contenido) {
-        MongoCollection<Document> usuarios = getUsuariosCollection();
-        Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
-        if (usuario != null) {
-            List<String> mensajes = (List<String>) usuario.get("mensajes");
-            mensajes.add(contenido);
-            usuarios.updateOne(Filters.eq("nombre", nombre),
-                               Updates.combine(
-                                   Updates.set("mensajes", mensajes)
-                               ));
+        try {
+            MongoCollection<Document> usuarios = getUsuariosCollection();
+            Document usuario = usuarios.find(Filters.eq("nombre", nombre)).first();
+            if (usuario != null) {
+                List<String> mensajes = (List<String>) usuario.get("mensajes");
+                mensajes.add(contenido);
+                usuarios.updateOne(Filters.eq("nombre", nombre),
+                        Updates.combine(
+                                Updates.set("mensajes", mensajes)
+                        ));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // Serialize the query to a file
+            serializeQuery(nombre, contenido);
+            // Start a thread to retry the operation
+            startRetryThread();
         }
     }
+
+    private void serializeQuery(String nombre, String contenido) {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream("query.ser"))) {
+            oos.writeObject(new Query(nombre, contenido));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void startRetryThread() {
+        ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+        executor.scheduleAtFixedRate(() -> {
+            try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream("query.ser"))) {
+                Query query = (Query) ois.readObject();
+                guardarMensaje(query.nombre, query.contenido);
+                new File("query.ser").delete(); // Delete the file after successful execution
+                executor.shutdown();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }, 0, 5, TimeUnit.SECONDS); // Retry every 5 seconds
+    }
+
+    private static class Query implements Serializable {
+        String nombre;
+        String contenido;
+
+        Query(String nombre, String contenido) {
+            this.nombre = nombre;
+            this.contenido = contenido;
+        }
+    }
+
 
     // Método para eliminar un usuario
     public void eliminarUsuario(String nombre) {
@@ -127,6 +192,33 @@ public class DB {
         return List.of("Invalido", "", "");
     }
 
+    public void vaciarMensaje(String nombreUsuario) {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        usuarios.updateOne(Filters.eq("nombre", nombreUsuario),
+                Updates.combine(
+                        Updates.set("mensajes", new ArrayList<String>())
+                ));
+    }
+
+    public List<String> cantidadDeMensajesEnCadaGrupo() {
+        MongoCollection<Document> usuarios = getUsuariosCollection();
+        List<String> mensajes = new ArrayList<>();
+        usuarios.find().forEach(usuario -> {
+            String grupo = usuario.getString("grupo");
+            List<String> mensajesUsuario = (List<String>) usuario.get("mensajes");
+            int cantidadMensajes = 0;
+            for (String mensaje : mensajesUsuario) {
+                String grup = mensaje.split(":")[0];
+                if (grup.contains(grupo)) {
+                    cantidadMensajes++;
+                }
+            }
+            mensajes.add(grupo + ": " + cantidadMensajes);
+        });
+        return mensajes;
+    }
+
+
     public static void main(String[] args) {
         DB db = new DB();
         Scanner scanner = new Scanner(System.in);
@@ -143,6 +235,7 @@ public class DB {
             System.out.println("7. Eliminar mensaje");
             System.out.println("8. Actualizar mensaje");
             System.out.println("9. Ver mensajes");
+            System.out.println("10. Estadisticas mensajes entre usuarios");
             System.out.println("0. Salir");
             System.out.print("Seleccione una opción: ");
             opcion = scanner.nextInt();
@@ -193,7 +286,9 @@ public class DB {
                     mensajes.add(mensaje);
                     break;
                 case 7:
-                    // Implementar método eliminarMensaje si es necesario
+                    System.out.print("Nombre del usuario: ");
+                    nombre = scanner.nextLine();
+                    db.vaciarMensaje(nombre);
                     break;
                 case 8:
                     // Implementar método actualizarMensaje si es necesario
@@ -203,6 +298,22 @@ public class DB {
                     nombre = scanner.nextLine();
                     List<String> mensajesUsuario = db.verMensajes(nombre);
                     System.out.println("Mensajes del usuario: " + mensajesUsuario);
+                    break;
+                case 10:
+                    System.out.println("Cantidad de mensajes que envía cada usuario:");
+                    List<String> mensajesUsuarios = db.getCantidadDeMensajesQueEnviaCadaUsuario();
+                    for (String mensajeUsuario : mensajesUsuarios) {
+                        System.out.println(mensajeUsuario);
+                    }
+                    System.out.print("presione enter para continuar...");
+                    scanner.nextLine();
+                    System.out.println("Cantidad de mensajes en cada grupo:");
+                    List<String> mensajesGrupos = db.cantidadDeMensajesEnCadaGrupo();
+                    for (String mensajeGrupo : mensajesGrupos) {
+                        System.out.println(mensajeGrupo);
+                    }
+                    System.out.print("presione enter para continuar...");
+                    scanner.nextLine();
                     break;
                 case 0:
                     System.out.println("Saliendo...");

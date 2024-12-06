@@ -1,0 +1,6 @@
+services:
+  servidor-chat:
+    build: .
+    ports:
+      - "5000:5000"
+    container_name: servidor_chat

@@ -6,6 +6,7 @@ import java.net.Socket;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+
 import javax.swing.DefaultListModel;
 import javax.swing.event.ListDataEvent;
 import javax.swing.event.ListDataListener;
@@ -84,42 +85,84 @@ public class HiloDeCliente implements Runnable, ListDataListener {
                     }
                     // Mensaje privado
                     else if (texto.startsWith("/privado ")) {
-                        String[] partes = texto.split(" ", 3);
+                        String[] partes = texto.split(" ", 3); // Parte 1: /privado, Parte 2: destinatario, Parte 3: mensaje
                         String destinatario = partes[1];
                         String mensajePrivado = partes[2];
-
+                    
+                        // Procesar el mensaje para añadir formato si es necesario
+                        if (mensajePrivado.startsWith("/negrita ")) {
+                            mensajePrivado = "<b>" + mensajePrivado.substring(9) + "</b>"; // Elimina "/negrita " y aplica formato
+                        } else if (mensajePrivado.startsWith("/cursiva ")) {
+                            mensajePrivado = "<i>" + mensajePrivado.substring(9) + "</i>"; // Elimina "/cursiva " y aplica formato
+                        } else if (mensajePrivado.startsWith("/subrayado ")) {
+                            mensajePrivado = "<u>" + mensajePrivado.substring(12) + "</u>"; // Elimina "/subrayado " y aplica formato
+                        }
+                        this.dataOutput.writeUTF("[Privado a " + destinatario + "]: " + mensajePrivado);
                         // Buscar el destinatario en el mapa de clientes conectados
                         HiloDeCliente clienteDestino = clientesConectados.get(destinatario);
                         if (clienteDestino != null) {
                             clienteDestino.dataOutput.writeUTF("Mensaje privado de " + alias + ": " + mensajePrivado);
                         } else {
-                            dataOutput.writeUTF("El cliente " + destinatario + "no está conectado.");
+                            db.guardarMensaje(alias, "Mensaje privado a " + destinatario + ": " + mensajePrivado+"\n");
+                            db.guardarMensaje(destinatario, "Mensaje privado de " + alias + ": " + mensajePrivado+"\n");
                         }
                     }
-                    else if (texto.startsWith("/grupo ")) {
-                        String[] partes = texto.split(" ", 3);
+                    else if (texto.startsWith("/negrita ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<b>" + mensaje + "</b>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/cursiva ")) {
+                        String mensaje = texto.substring(9);
+                        mensaje = "<i>" + mensaje + "</i>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/subrayado ")) {
+                        String mensaje = texto.substring(12);
+                        mensaje = "<u>" + mensaje + "</u>";
+                        dataOutput.writeUTF(mensaje);
+                    } else if (texto.startsWith("/crear ")) {
+                        if (tipo.equals("admin")) {
+                            String nombre = texto.split(" ")[1];
+                            String clave = texto.split(" ")[2];
+                            Boolean admin = texto.split(" ")[3].equals("admin");
+                            String grupo = texto.split(" ")[4];
+                            db.agregarUsuario(nombre, clave, admin, grupo);
+                            dataOutput.writeUTF("Usuario creado con éxito.");
+                        } else {
+                            dataOutput.writeUTF("No tienes permiso para crear usuarios.");
+                        }
+                    } else if (texto.startsWith("/grupo ")) {
+                        String[] partes = texto.split(" ", 3); // Parte 1: /grupo, Parte 2: grupo, Parte 3: mensaje
                         String destinatario = partes[1];
                         String mensajePrivado = partes[2];
-
+                    
+                        // Procesar el mensaje para añadir formato si es necesario
+                        if (mensajePrivado.startsWith("/negrita ")) {
+                            mensajePrivado = "<b>" + mensajePrivado.substring(9) + "</b>";
+                        } else if (mensajePrivado.startsWith("/cursiva ")) {
+                            mensajePrivado = "<i>" + mensajePrivado.substring(9) + "</i>";
+                        } else if (mensajePrivado.startsWith("/subrayado ")) {
+                            mensajePrivado = "<u>" + mensajePrivado.substring(12) + "</u>";
+                        }
+                    
                         // Verificar si el destinatario es un grupo
                         if (grupos.containsKey(destinatario)) {
-                            // Enviar el mensaje solo a los miembros del grupo actual
+                            // Enviar el mensaje solo a los miembros del grupo
                             DefaultListModel<String> mensajesGrupo = grupos.get(destinatario);
                             synchronized (mensajesGrupo) {
                                 mensajesGrupo.addElement(alias + ": " + mensajePrivado);
                                 // Notificar a todos los clientes en el grupo
                                 for (HiloDeCliente cliente : clientesConectados.values()) {
-                                    if (cliente.grupoActual.equals(destinatario)) { // Ahora verifica el grupo destinatario
+                                    if (cliente.grupoActual.equals(destinatario)) {
                                         db.guardarMensaje(alias, "[" + grupoActual + "]" + alias + ": " + mensajePrivado);
-                                        cliente.dataOutput.writeUTF("["+grupoActual+"]" + alias + ": " + mensajePrivado);
+                                        cliente.dataOutput.writeUTF("[" + grupoActual + "]" + alias + ": " + mensajePrivado);
                                     }
                                 }
-                                
                             }
                         } else {
                             dataOutput.writeUTF("El grupo " + destinatario + " no existe.");
                         }
                     }
+                    
                     // Mensaje a todos los clientes
                     else if (texto.startsWith("/all ")) {
                         String mensaje = texto.substring(5); // Extrae el mensaje después del comando
@@ -151,7 +194,6 @@ public class HiloDeCliente implements Runnable, ListDataListener {
     }
 
     private void notificarGrupo(String mensaje) {
-        DB db = new DB();
         for (HiloDeCliente cliente : clientesConectados.values()) {
             if (cliente.grupoActual.equals(grupoActual)) {
                 try {
